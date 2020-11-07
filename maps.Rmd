@@ -1,0 +1,566 @@
+---
+title: "Accidentes Barcelona"
+author: "Laura Navarro Soler | Xavier Vivancos García"
+date: '`r Sys.Date()`'
+output:
+  html_document:
+    toc: yes
+    number_sections: yes
+    code_folding: hide
+    theme: cosmo
+    highlight: tango
+---
+
+# **Librerias y carga de datos**
+
+```{r message=FALSE, warning=FALSE}
+# Cargar librerías
+library(tidyverse)
+library(leaflet) 
+library(leaflet.extras) # funcionalidades extra para el paquete leaflet
+library(geojsonio) # leer archivo GeoJSON con los barrios de Barcelona
+library(broom) # pasar formato polygon a tidy 
+library(mapproj) # se necesita para visualizar mapas con ggplot
+library(plotly)
+library(viridis) # escala color
+library(ggtext) # dar formato a títulos de los graficos
+library(grid)
+library(facetscales) # diferentes escalas en los facets
+library(scales)
+library(cartogram) # mapas raros
+library(tmap)
+library(sp)
+library(sf) # convertir sp a sf. Se necesita para mapas raros con plotly
+library(htmlwidgets) # quitar cursor de plotly
+
+# Leer archivo
+data <- read.csv("https://raw.githubusercontent.com/lau-cloud/BCN_OPEN_DATA/master/2019_accidents_gu_bcn.csv", encoding="UTF-8", stringsAsFactors=TRUE) %>%
+  rename(Longitude=Longitud, Latitude=Latitud)
+  
+# Leer archivo GeoJSON
+neighbourhoods <- geojson_read("https://raw.githubusercontent.com/lau-cloud/BCN_OPEN_DATA/master/neighbourhoods.geojson", what='sp')
+```
+
+# **Mapa con leaflet**
+
+```{r message=FALSE, warning=FALSE, fig.align='center'}
+# Map
+leaflet() %>%
+  
+  addTiles() %>%
+  # addTiles(group="OSM") %>%
+  # addProviderTiles("Stamen.Watercolor") %>%
+  # addProviderTiles("Esri", group="Esri") %>%
+
+  # Add polygons
+  addPolygons(data=neighbourhoods, color="black", weight=2.5, opacity=1) %>%
+
+  # Extras
+  # addSearchOSM() %>%
+  # addReverseSearchOSM() %>%
+  addResetMapButton() %>%
+
+  # Add marker layer for each sector with corresponding group name
+                  
+  # Matí
+  addCircleMarkers(data=data %>% filter(Descripcio_torn=="Matí"), color="green", 
+                   group="Matí", radius=3, stroke=FALSE, fillOpacity=0.9,
+                   popup=~paste0("<b>", Nom_districte,"</b>", "<br/>",
+                                 "Mes: ", Nom_mes, "<br/>",
+                                 "Dia de la setmana: ", Descripcio_dia_setmana, "<br/>",
+                                 "Hora: ", Hora_dia)) %>%
+                                    
+  # Tarda                                                         
+  addCircleMarkers(data=data %>% filter(Descripcio_torn=="Tarda"), color="orange", 
+                   group="Tarda", radius=3, stroke=FALSE, fillOpacity=0.9,
+                   popup=~paste0("<b>", Nom_districte,"</b>", "<br/>", 
+                                 "Mes: ", Nom_mes, "<br/>",
+                                 "Dia de la setmana: ", Descripcio_dia_setmana, "<br/>",
+                                 "Hora: ", Hora_dia)) %>%
+  
+  # Nit                                                           
+  addCircleMarkers(data=data %>% filter(Descripcio_torn=="Nit"), color="blue",
+                   group="Nit", radius=3, stroke=FALSE, fillOpacity=0.9,
+                   popup=~paste0("<b>", Nom_districte,"</b>", "<br/>", 
+                                 "Mes: ", Nom_mes, "<br/>",
+                                 "Dia de la setmana: ", Descripcio_dia_setmana, "<br/>",
+                                 "Hora: ", Hora_dia)) %>%
+  
+  # Add layer controls for base and overlay groups
+  addLayersControl(overlayGroups=c("Matí", "Tarda", "Nit")
+                   # baseGroups=c("OSM", "Stamen.Watercolor", "Esri")
+                   ) %>%
+  
+  # Add legend
+  addLegend(position="bottomleft",
+            colors=c("green", "orange", "blue"), 
+            labels=c("Matí", "Tarda", "Nit"))
+```
+
+
+```{r message=FALSE, warning=FALSE, fig.align='center'}
+# Número de accidentes por barrio
+n <-  data %>%
+  count(Nom_barri) %>%
+  rename(neighbourhood=Nom_barri)
+  
+# Introducimos el número de accidentes por barrio en el archivo GeoJSON
+neighbourhoods@data <- plyr::join(neighbourhoods@data, n) 
+
+l <- leaflet(neighbourhoods) %>% addTiles() 
+
+pal <- colorNumeric("viridis", NULL)
+
+l %>% addPolygons(color="grey", weight=1, fillColor=~pal(log10(neighbourhoods@data[["n"]])),
+                  fillOpacity=0.5,
+                  label=~paste0(neighbourhoods@data[["neighbourhood"]], ": ", neighbourhoods@data[["n"]]), highlightOptions=highlightOptions(weight=4)) %>%
+  addResetMapButton() %>%
+  addLegend(pal=pal, values=~log10(neighbourhoods@data[["n"]]), 
+            opacity=0.5, title="Nº accidentes", position="bottomright",
+            labFormat=labelFormat(transform=function(x) round(10^x))) 
+```
+
+
+
+# **Heatmap con leaflet**
+
+```{r message=FALSE, warning=FALSE, fig.align='center'}
+# Map
+leaflet() %>%
+  
+  addTiles() %>%
+  # addTiles(group="OSM") %>%
+  # addProviderTiles("Stamen.Watercolor") %>%
+  # addProviderTiles("Esri", group="Esri") %>%
+  # addProviderTiles("Wikimedia") %>%
+  
+  # Add polygons
+  # addPolygons(data=neighbourhoods, color="black", weight=2.5, opacity=1) %>%
+
+  # Extras
+  # addSearchOSM() %>%
+  # addReverseSearchOSM() %>%
+  addResetMapButton() %>%
+
+  # Add heatmap
+  addHeatmap(data=data, lng=~Longitude, lat=~Latitude, radius=7)
+```
+
+# **Mapas choropleth**
+
+## ggplot con labels 
+
+```{r message=FALSE, warning=FALSE, fig.align='center'}
+# Número de accidentes por barrio
+accidentes <- data %>%
+  group_by(NK_Any) %>%
+  count(Nom_barri) %>%
+  arrange(desc(n)) %>%
+  rename(id=Nom_barri) 
+
+# Pasamos el archivo geojson de formato polygon a tidy
+tidygeojson <- tidy(neighbourhoods, region="neighbourhood")
+
+# Labels en el centro de cada barrio
+# https://stackoverflow.com/questions/9441436/ggplot-centered-names-on-a-map
+labels <- aggregate(cbind(long, lat) ~ id, data=tidygeojson, FUN=function(x)mean(range(x)))
+
+# Labels
+ggplot() +
+  geom_polygon(data=tidygeojson, aes(x=long, y=lat, group=id), fill="#69b3a2", color="white") +
+  theme_void() +
+  coord_map() +
+  geom_text(data=labels, aes(long, lat, label=id), size=2)
+```
+
+## Número de accidentes por barrio con ggplotly
+
+```{r message=FALSE, warning=FALSE, fig.align='center'}
+# Project the map
+projected_map <- spTransform(neighbourhoods, CRS("+init=epsg:3395"))
+
+# Pasamos el archivo geojson de formato polygon a tidy
+tidygeojson <- tidy(projected_map, region="neighbourhood")
+
+# Unimos datos numéricos (accidentes por barrios) con datos geográficos (latitud y longitud)
+mergeddata <- merge(tidygeojson, accidentes, by=c("id"), sort=TRUE)
+
+# Labels del número de accidentes
+# labels2 <- aggregate(cbind(long, lat) ~ n, data=mergeddata, FUN=function(x)mean(range(x)))
+
+# Mapa con ggplot
+map <- ggplot() +
+  geom_polygon(data=mergeddata, aes(x=long, y=lat, group=id, fill=n, 
+                              text=paste0(id,": ",n)),
+               colour="black") +
+  theme_void() +
+  coord_map() +
+  # geom_text(data=labels2, aes(long, lat, label=n)) +
+  # geom_text(data=labels, aes(long, lat, label=id), size=2) +
+  scale_fill_viridis_c(trans=scales::pseudo_log_trans(sigma=0.001)) +
+  theme(legend.title=element_blank()) +
+  labs(title="Accidentes de tráfico en Barcelona por barrio (2019)")
+
+ax <- list(
+  title="",
+  zeroline=FALSE,
+  showline=FALSE,
+  showticklabels=FALSE,
+  showgrid=FALSE
+)
+
+# Mapa con ggplotly
+ggplotly(map, tooltip=c("text")) %>%
+  config(displayModeBar=F) %>% 
+  layout(xaxis=ax, yaxis=ax) %>% onRender("function(el, x) {Plotly.d3.select('.cursor-crosshair').style('cursor', 'default')}")
+```
+
+## plotly
+
+```{r message=FALSE, warning=FALSE, fig.align='center'}
+accidentes2 <- accidentes %>% rename(neighbourhood=id)
+geojson <- rjson::fromJSON(file="https://raw.githubusercontent.com/lau-cloud/BCN_OPEN_DATA/master/neighbourhoods.geojson")
+
+g <- list(fitbounds="locations", visible=FALSE)
+
+fig <- plot_ly() %>%
+  add_trace(type="choropleth",
+            geojson=geojson,
+            locations=accidentes2$neighbourhood,
+            z=accidentes2$n,
+            colorscale="Viridis",
+            featureidkey="properties.neighbourhood")
+
+fig <- fig %>% layout(geo=g) %>% 
+  colorbar(title="Nº accidentes") %>% 
+  layout(title="Accidentes de tráfico en Barcelona (2019)", xaxis=ax, yaxis=ax) %>%
+  config(displayModeBar=F) 
+
+fig
+```
+
+
+## Facets
+
+```{r message=FALSE, warning=FALSE, fig.align='center'}
+# Leemos archivo (2018)
+data2 <- read.csv("C:/Users/xviva/OneDrive/Desktop/data viz bcn/accidentes2018.csv",
+                 encoding="UTF-8", stringsAsFactors=TRUE) %>%
+  rename(Longitude=Longitud, Latitude=Latitud) 
+  
+# Número de accidentes por barrio (2018)
+accidentes2 <- data2 %>%
+  group_by(Any) %>%
+  count(Nom_barri) %>%
+  arrange(desc(n)) %>%
+  rename(id=Nom_barri,
+         NK_Any=Any) 
+
+# Unimos datos numéricos (accidentes por barrios) con datos geográficos (latitud y longitud)
+mergeddata2 <- merge(tidygeojson, accidentes2, by="id", sort=TRUE)
+
+# Datos de 2018 y 2019
+data1819 <- rbind(mergeddata, mergeddata2)
+
+# Mapa con ggplot
+mapa <- ggplot() +
+  geom_polygon(data=data1819, aes(x=long, y=lat, group=id, fill=n, 
+                                  text=paste0(id,": ",n)),
+               colour="black") +
+  theme_void() +
+  coord_map() +
+  scale_fill_viridis_c(trans=scales::pseudo_log_trans(sigma=0.001)) +
+  theme(legend.title=element_blank()) +
+  labs(title="Accidentes de tráfico en Barcelona por barrio") +
+  facet_wrap(vars(NK_Any))
+
+# Mapa con ggplotly
+ggplotly(mapa, tooltip=c("text")) %>%
+  config(displayModeBar=F) %>% 
+  layout(xaxis=ax, yaxis=ax)  %>% onRender("function(el, x) {Plotly.d3.select('.cursor-crosshair').style('cursor', 'default')}")
+```
+
+
+# **Cartogramas con ggplot**
+
+## Continuous Area Cartogram
+
+
+```{r message=FALSE, warning=FALSE, fig.align='center'}
+# Número de accidentes por barrio
+n <-  data %>%
+  count(Nom_barri) %>%
+  rename(neighbourhood=Nom_barri)
+  
+# Introducimos el número de accidentes por barrio en el archivo GeoJSON
+neighbourhoods@data <- plyr::join(neighbourhoods@data, n) 
+
+# Project the map
+projected_map <- spTransform(neighbourhoods, CRS("+init=epsg:3395"))
+
+# Construct cartogram
+cartogram <- cartogram_cont(projected_map, "n")
+
+# Plot it 
+  tm_shape(cartogram) + 
+  tm_borders() +
+  tm_polygons("n", style="jenks") +
+  tm_layout(frame=FALSE, legend.position=c("left", "bottom"))
+```
+
+## Non-contiguous Area Cartogram
+
+```{r message=FALSE, warning=FALSE, fig.align='center'}
+# Construct cartogram 
+cartogram <- cartogram_ncont(projected_map, "n")
+
+# Plot it
+tm_shape(projected_map) + 
+  tm_borders() +
+  tm_shape(cartogram) +
+  tm_polygons("n", style="jenks") +
+  tm_layout(frame=FALSE, legend.position=c("left", "bottom"))
+```
+
+## Non-Overlapping Circles Cartogram
+
+```{r message=FALSE, warning=FALSE, fig.align='center'}
+# Construct cartogram 
+cartogram <- cartogram_dorling(projected_map, "n")
+
+# Plot it
+tm_shape(projected_map) + 
+  tm_borders() +
+  tm_shape(cartogram) + 
+  tm_polygons("n", style="jenks", alpha=0.5) +
+  tm_layout(frame=FALSE, legend.position=c("left", "bottom"))
+```
+
+## Todo junto 
+
+```{r fig.align='center', message=FALSE, warning=FALSE}
+# Continuous Area Cartogram
+cartogram <- cartogram_cont(projected_map, "n")
+
+map1 <- tm_shape(cartogram) +
+  tm_borders() +
+  tm_polygons("n", style="jenks", legend.show=FALSE) +
+  tm_layout(frame=FALSE)
+
+# Non-contiguous Area Cartogram 
+cartogram <- cartogram_ncont(projected_map, "n")
+
+map2 <- tm_shape(projected_map) + 
+  tm_borders() +
+  tm_shape(cartogram) +
+  tm_polygons("n", style="jenks", legend.show=FALSE) +
+  tm_layout(frame=FALSE)
+
+# Non-Overlapping Circles Cartogram
+cartogram <- cartogram_dorling(projected_map, "n")
+
+map3 <- tm_shape(projected_map) + 
+  tm_borders() +
+  tm_shape(cartogram) + 
+  tm_polygons("n", style="jenks", legend.show=FALSE, alpha=0.5) +
+  tm_layout(frame=FALSE)
+
+# Legend
+legend <- tm_shape(projected_map) + tm_polygons("n", style="jenks") +
+  tm_layout(frame=FALSE, legend.only=TRUE, legend.position=c("center", "center"))
+
+tmap_arrange(map1, map2, map3, legend, nrow=1)
+```
+
+# **Cartogramas con plotly**
+
+## Continuous Area Cartogram
+
+
+
+```{r fig.align='center', message=FALSE, warning=FALSE}
+# Continuous Area Cartogram
+cartogram <- cartogram_cont(projected_map, "n")
+
+plot_ly(span=I(1)) %>% 
+  add_sf(
+    data=st_as_sf(projected_map), 
+    color=I("white"),
+    hoverinfo="none"
+  ) %>%
+  add_sf(
+    data=st_as_sf(cartogram), 
+    stroke=I("black"),
+    color=~n,
+    split=~neighbourhood, 
+    text=~paste(paste0(neighbourhood,": ",n)), 
+    hoverinfo="text", 
+    hoveron="fills"
+  ) %>%
+  layout(showlegend=FALSE) %>%
+  config(displayModeBar=F) %>% 
+  layout(xaxis=ax, yaxis=ax) %>% onRender("function(el, x) {Plotly.d3.select('.cursor-crosshair').style('cursor', 'default')}")
+```
+
+
+## Non-contiguous Area Cartogram
+
+
+```{r fig.align='center', message=FALSE, warning=FALSE}
+# Non-contiguous Area Cartogram 
+cartogram <- cartogram_ncont(projected_map, "n")
+
+plot_ly(stroke=I("black"), span=I(1)) %>% 
+  add_sf(
+    data=st_as_sf(projected_map), 
+    color=I("gray95"),
+    hoverinfo="none"
+  ) %>%
+  add_sf(
+    data=st_as_sf(cartogram), 
+    color=~n,
+    split=~neighbourhood, 
+    text=~paste(paste0(neighbourhood,": ",n)), 
+    hoverinfo="text", 
+    hoveron="fills"
+  ) %>%
+  layout(showlegend=FALSE) %>% 
+  config(displayModeBar=F) %>%
+  layout(xaxis=ax, yaxis=ax) %>% onRender("function(el, x) {Plotly.d3.select('.cursor-crosshair').style('cursor', 'default')}")
+```
+
+
+## Non-Overlapping Circles Cartogram
+
+
+```{r fig.align='center', message=FALSE, warning=FALSE}
+# Non-Overlapping Circles Cartogram
+cartogram <- cartogram_dorling(projected_map, "n")
+
+plot_ly(stroke=I("black"), span=I(1)) %>% 
+  add_sf(
+    data=st_as_sf(projected_map), 
+    color=I("gray95"),
+    hoverinfo="none"
+  ) %>%
+  add_sf(
+    data=st_as_sf(cartogram), 
+    color=~n,
+    split=~neighbourhood, 
+    text=~paste(paste0(neighbourhood,": ",n)),
+    hoverinfo="text", 
+    hoveron="fills"
+  ) %>%
+  layout(showlegend=FALSE) %>% 
+  config(displayModeBar=F) %>%
+  layout(xaxis=ax, yaxis=ax) %>% onRender("function(el, x) {Plotly.d3.select('.cursor-crosshair').style('cursor', 'default')}")
+```
+
+# **Waterfall**
+
+```{r fig.align='center', message=FALSE, warning=FALSE}
+# Diferentes escalas para cada facet de la visualización
+# scales_y <- list(
+# mati=scale_y_continuous(limits=c(0, 2800), breaks=seq(0, 2800, 1000)),
+# tarda=scale_y_continuous(limits=c(0, 700), breaks=seq(0, 700, 250)),
+# nit=scale_y_continuous(limits=c(0, 700), breaks=seq(0, 700, 250)))
+
+# Orden meses
+data$Nom_mes <- factor(data$Nom_mes, levels=unique(data$Nom_mes))
+
+# Matí
+mati <- data %>%
+  filter(Descripcio_torn=="Matí") %>%
+  count(Nom_mes) %>%
+  rename(start=n) %>%
+  mutate(end=lead(start, n=1)) %>%
+  mutate(Difference=end-start)
+
+mati2 <- rbind(c("aa", 0, 338, 38), mati)
+mati2$Nom_mes <- lead(mati2$Nom_mes, 1)
+mati2$id <- seq_along(mati2$start)
+mati2$type <- ifelse(mati2$Difference>0, "Más accidentes", "Menos accidentes")
+mati2$Category <- rep("Mañana", 13)
+mati2 <- mati2 %>% head(n=12)
+
+# Tarda
+tarda <- data %>%
+  filter(Descripcio_torn=="Tarda") %>%
+  count(Nom_mes) %>%
+  rename(start=n) %>%
+  mutate(end=lead(start, n=1)) %>%
+  mutate(Difference=end-start)
+
+tarda2 <- rbind(c("aa", 0, 410, 410), tarda)
+tarda2$Nom_mes <- lead(tarda2$Nom_mes, 1)
+tarda2$id <- seq_along(tarda2$start)
+tarda2$type <- ifelse(tarda2$Difference>0, "Más accidentes", "Menos accidentes")
+tarda2$Category <- rep("Tarde", 13)
+tarda2 <- tarda2 %>% head(n=12)
+
+# Nit
+nit <- data %>%
+  filter(Descripcio_torn=="Nit") %>%
+  count(Nom_mes) %>%
+  rename(start=n) %>%
+  mutate(end=lead(start, n=1)) %>%
+  mutate(Difference=end-start)
+
+nit2 <- rbind(c("aa", 0, 97, 97), nit)
+nit2$Nom_mes <- lead(nit2$Nom_mes, 1)
+nit2$id <- seq_along(nit2$start)
+nit2$type <- ifelse(nit2$Difference>0, "Más accidentes", "Menos accidentes")
+nit2$Category <- rep("Noche", 13)
+nit2 <- nit2 %>% head(n=12)
+
+
+# Juntamos los tres data frame
+data2 <- rbind(mati2, tarda2, nit2) %>%
+   mutate_at(vars(start, end, Difference), as.numeric)
+
+# Orden 
+data2$Category <- factor(data2$Category, levels= c("Mañana", "Tarde", "Noche"))
+
+# Visualización
+ggplot(data=data2, aes(x=Nom_mes, fill=type)) + 
+  geom_rect(aes(x=Nom_mes, xmin=id-0.45, xmax=id+0.45, ymin=end, ymax=start), alpha=3/5) +
+  labs(y="Muertes", 
+       title="<span style='color:firebrick;'><b> Incremento</span></b> y <span style='color:darkseagreen;'><b>disminución</span></b> de accidentes en 2019") +
+  scale_fill_manual(values=c( "firebrick", "darkseagreen")) +
+  geom_text(aes(x=id, label=Difference, y=end), position=position_stack(vjust=1), size=3) +
+  theme_bw() +
+  facet_grid(vars(Category), scales="free") +
+  #facet_grid_sc(Category ~ ., scales=list(y=scales_y)) +
+  theme(axis.text.x=element_text(angle=45, hjust=1),
+        axis.title.x=element_blank(),
+        legend.position="none",
+        strip.text=element_text(colour='white', size=11),
+        panel.grid.minor=element_blank(),
+        plot.title = element_markdown(family = "sans",
+                                  hjust = 0,
+                                  vjust=3)) 
+```
+
+
+
+
+
+
+
+
+
+
+
+# **Enlaces de interés**
+
+https://www.r-graph-gallery.com/327-chloropleth-map-from-geojson-with-ggplot2.html
+
+https://rstudio-pubs-static.s3.amazonaws.com/407929_afc5ef0f2ad648389447a6ca3f4a7cd4.html
+
+https://geoinquietosmadrid.github.io/datavis-with-r/secciones/maps/index.html
+
+http://leaflet-extras.github.io/leaflet-providers/preview/
+
+https://www.r-graph-gallery.com/327-chloropleth-map-from-geojson-with-ggplot2.html
+
+
