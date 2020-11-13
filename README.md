@@ -15,3 +15,7 @@ The theme of the dataviz should reflect any aspect of the reality or a problem r
 
 
 In this repository you can find our delivery for the World Data Viz Challenge 2020 Barcelona-Kobe, a Shiny application developed by [@lau-cloud](https://github.com/lau-cloud) and me. You can enjoy the final visualization [here](https://bcndata.wixsite.com/accidents2019). 
+
+<p align="center">
+<img src='dataviz.gif' height="350" /></a>
+</p>
