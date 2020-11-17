@@ -3,8 +3,8 @@
 <!-- badges: start -->
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/xavivg91/data-viz-challenge-bcn-2020/issues/new)
-<!-- [![HitCount](http://hits.dwyl.com/xavivg91/data-viz-challenge-bcn-2020.svg)](http://hits.dwyl.com/xavivg91/data-viz-challenge-bcn-2020) -->
 ![](https://visitor-badge.glitch.me/badge?page_id=github.com/xavivg91/data-viz-challenge-bcn-2020)
+<!-- [![HitCount](http://hits.dwyl.com/xavivg91/data-viz-challenge-bcn-2020.svg)](http://hits.dwyl.com/xavivg91/data-viz-challenge-bcn-2020) -->
 
 
 [![GitHub Xavi](https://img.shields.io/github/followers/xavivg91?label=follow&style=social)](https://github.com/xavivg91/)
