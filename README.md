@@ -6,8 +6,8 @@
 ![](https://visitor-badge.glitch.me/badge?page_id=github.com/xavivg91/data-viz-challenge-bcn-2020)
 <!-- [![HitCount](http://hits.dwyl.com/xavivg91/data-viz-challenge-bcn-2020.svg)](http://hits.dwyl.com/xavivg91/data-viz-challenge-bcn-2020) -->
 
-
 [![GitHub Xavi](https://img.shields.io/github/followers/xavivg91?label=follow&style=social)](https://github.com/xavivg91/)
+[![Twitter Follow](https://img.shields.io/twitter/follow/LauraNavarroSol.svg?style=social)](https://twitter.com/LauraNavarroSol)
 [![Twitter Follow](https://img.shields.io/twitter/follow/Xavier91vg.svg?style=social)](https://twitter.com/Xavier91vg)
 <!-- badges: end -->
 
