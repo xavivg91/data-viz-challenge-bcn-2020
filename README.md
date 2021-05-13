@@ -15,7 +15,7 @@ The World Data Viz Challenge 2020 Barcelona-Kobe is a competition that aims to h
 
 The theme of the dataviz should reflect any aspect of the reality or a problem related to the city of Barcelona in the framework of the Sustainable Development Goals that are aligned with the Strategy for the promotion of the [Agenda 2030 in the city of Barcelona](https://ajuntament.barcelona.cat/agenda2030/es). You can check out more information about the competition [here](https://opendata-ajuntament.barcelona.cat/en/world-data-viz-challenge-bcn-kobe-2020).
 
-In this repository you can find our delivery for the World Data Viz Challenge 2020 Barcelona-Kobe, a Shiny application developed by [@lau-cloud](https://github.com/lau-cloud) and me. You can enjoy the final visualization [here](https://xavishiny.shinyapps.io/data-viz-challenge-bcn-2020/). 
+In this repository you can find our delivery for the World Data Viz Challenge 2020 Barcelona-Kobe, a Shiny application developed by [@lau-cloud](https://github.com/lau-cloud) and me. You can enjoy the final visualization [here](https://bcndata.wixsite.com/accidents2019). 
 
 <p align="center">
 <img src='dataviz.gif' height="350" /></a>
