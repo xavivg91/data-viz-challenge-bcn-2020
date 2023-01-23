@@ -7,8 +7,8 @@
 <!-- [![HitCount](http://hits.dwyl.com/xavivg91/data-viz-challenge-bcn-2020.svg)](http://hits.dwyl.com/xavivg91/data-viz-challenge-bcn-2020) -->
 
 [![GitHub Xavi](https://img.shields.io/github/followers/xavivg91?label=follow&style=social)](https://github.com/xavivg91/)
-[![Twitter Follow](https://img.shields.io/twitter/follow/LauraNavarroSol.svg?style=social)](https://twitter.com/LauraNavarroSol)
-[![Twitter Follow](https://img.shields.io/twitter/follow/Xavier91vg.svg?style=social)](https://twitter.com/Xavier91vg)
+[![Twitter Follow](https://img.shields.io/twitter/url/https/twitter.com/LauraNavarroSol.svg?style=social&label=Follow%20%40LauraNavarroSol)](https://twitter.com/LauraNavarroSol)
+[![Twitter Follow](https://img.shields.io/twitter/url/https/twitter.com/Xavier91vg.svg?style=social&label=Follow%20%40Xavier91vg)](https://twitter.com/Xavier91vg)
 <!-- badges: end -->
 
 The World Data Viz Challenge 2020 Barcelona-Kobe is a competition that aims to highlight the challenges faced by smart cities, and to invite citizens to address their realities and issues. Thanks to data analysis and visualisation, participants have the opportunity to make proposals that can be useful for further public policy elaboration and improvement.
